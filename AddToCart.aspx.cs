@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
@@ -11,6 +12,7 @@ namespace Add_to_cart
 {
     public partial class AddToCart : System.Web.UI.Page
     {
+        public decimal tgp;
         protected void Page_Load(object sender, EventArgs e)
         {
             if (!IsPostBack)
@@ -18,7 +20,19 @@ namespace Add_to_cart
                 BindCartItems();
             }
         }
-       
+        private string CreateToken(string message, string secret)
+        {
+            secret = secret ?? "";
+            var encoding = new System.Text.ASCIIEncoding();
+            byte[] keyByte = encoding.GetBytes(secret);
+            byte[] messageBytes = encoding.GetBytes(message);
+            using (var hmacsha256 = new HMACSHA256(keyByte))
+            {
+                byte[] hashmessage = hmacsha256.ComputeHash(messageBytes);
+                return Convert.ToBase64String(hashmessage);
+            }
+        }
+
 
         protected void BindCartItems()
         {
@@ -54,7 +68,10 @@ namespace Add_to_cart
                                 row["Quantity"] = cartItem.Quantity;
                                 decimal price = Convert.ToDecimal(row["Price"]);
                                 int quantity = Convert.ToInt32(row["Quantity"]);
-                                row["TotalPrice"] = price * quantity;
+                                decimal totalPrice = price * quantity;
+                                row["TotalPrice"] = totalPrice;
+                                cartItem.TotalPrice = totalPrice;
+                              //   tgp = cartItem.TotalPrice;
                             }
                             else
                             {
@@ -67,6 +84,9 @@ namespace Add_to_cart
                         GridViewCart.DataBind();
                     }
                 }
+                decimal grandTotal = CalculateGrandTotal();
+                tgp = grandTotal;
+                lblTotalPay.Text = grandTotal.ToString("C");
             }
             else
             {
@@ -78,13 +98,13 @@ namespace Add_to_cart
         protected void GridViewCart_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             
-           // Response.Write("GridRowCmd");
+            Response.Write("GridRowCmd");
             if (e.CommandName == "DecreaseQuantity")
             {
                 int productId = Convert.ToInt32(e.CommandArgument);
-                // Response.Write("Callin Dec");
+                
                 ShoppingCart.DecreaseQuantity(productId);
-                //Response.Write("Callin Dec");
+                
                 BindCartItems(); 
                // Response.Write("Binded Dec");
             }
@@ -101,13 +121,40 @@ namespace Add_to_cart
                 int productIdToDelete;
                 if (int.TryParse(e.CommandArgument.ToString(), out productIdToDelete))
                 {
-                    // Implement deletion logic here
                     ShoppingCart.Delete(productIdToDelete);
-                  //  BindCartGridView(); // Call a method to rebind the GridView
                 }
                 
                 BindCartItems();
             }
+        }
+        protected decimal CalculateGrandTotal()
+{
+    decimal grandTotal = 0;
+    List<ShoppingCart.CartItem> cartItems = ShoppingCart.GetCartItems();
+
+    foreach (var cartItem in cartItems)
+    {
+        grandTotal += cartItem.TotalPrice;
+    }
+
+    return grandTotal;
+}
+
+        protected void btnBuy_Click(object sender, EventArgs e)
+        {
+            decimal grandTotal = CalculateGrandTotal();
+
+            
+            if (grandTotal > 0)
+            {
+                Response.Redirect($"MakePayment.aspx?grandTotal={grandTotal}");
+            }
+            else
+            {
+                 ScriptManager.RegisterStartupScript(this, GetType(), "EmptyCartAlert", "alert('Your cart is empty.');", true);
+            }
+
+
         }
     }
 
@@ -120,7 +167,6 @@ namespace Add_to_cart
             var cartItems = HttpContext.Current.Session[CartSessionKey] as List<CartItem>;
             if (cartItems == null)
             {
-                HttpContext.Current.Response.Write("\nYeah CartItem called---'!");
                 cartItems = new List<CartItem>();
                 HttpContext.Current.Session[CartSessionKey] = cartItems;
             }
@@ -129,7 +175,6 @@ namespace Add_to_cart
 
         public static void AddToCart(int productId)
         {
-            HttpContext.Current.Response.Write("inside!addToCart");
             var cartItems = GetCartItems();
             var existingItem = cartItems.FirstOrDefault(item => item.ProductId == productId);
             if (existingItem != null)
@@ -146,22 +191,21 @@ namespace Add_to_cart
 
         public static void DecreaseQuantity(int productId)
         {
-            HttpContext.Current.Response.Write("inside!DecQTY  ");
+            
             var cartItems = GetCartItems();
             var existingItem = cartItems.FirstOrDefault(item => item.ProductId == productId);
+            HttpContext.Current.Response.Write("\nexistin Item: ---!"+existingItem+"$$$");
             if (existingItem != null)
             {
                 HttpContext.Current.Response.Write("  insideDec!");
                 if (existingItem.Quantity > 1)
                 {
-                    HttpContext.Current.Response.Write("  Decreasin'!");
-                    existingItem.Quantity--; // Decrease the quantity by 1
+                    existingItem.Quantity--; 
                 }
                 else
                 {
-                    HttpContext.Current.Response.Write("Decreasin at Zerooo'!");
-                    cartItems.Remove(existingItem);
-                   
+                    
+                    cartItems.RemoveAll(item => item.ProductId == productId);
                 }
             }
             HttpContext.Current.Session[CartSessionKey] = cartItems;
@@ -198,10 +242,12 @@ namespace Add_to_cart
             public int ProductId { get; set; }
             public int Quantity { get; set; }
 
+            public decimal TotalPrice { get; set; }
             public CartItem(int productId, int quantity)
             {
                 ProductId = productId;
                 Quantity = quantity;
+                TotalPrice = 0;
             }
         }
 
