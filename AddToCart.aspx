@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="AddToCart.aspx.cs" Inherits="Add_to_cart.AddToCart" %>
+<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="AddToCart.aspx.cs" Inherits="Add_to_cart.AddToCart" %>
 
 <!DOCTYPE html>
 
@@ -24,6 +24,7 @@
             background-color: #111;
         }
     </style>
+
 </head>
 <body>
     <form id="addToCart" runat="server">
@@ -36,6 +37,8 @@
              <h2>Shopping Cart</h2>
             <asp:GridView ID="GridViewCart" runat="server" AutoGenerateColumns="False" CssClass="gridview" OnRowCommand="GridViewCart_RowCommand">
                 <Columns>
+                    
+        
                     <asp:BoundField DataField="ProductName" HeaderText="Product Name" />
                     <asp:BoundField DataField="Price" HeaderText="Price" DataFormatString="{0:C}" />
                     <asp:TemplateField HeaderText="Quantity">
@@ -45,7 +48,7 @@
                             <asp:Button ID="btnAdd" runat="server" Text="+" CommandName="IncreaseQuantity" CommandArgument='<%# Eval("ProductId") %>' />
                         </ItemTemplate>
                     </asp:TemplateField>
-                    <asp:BoundField DataField="totalPrice" HeaderText="Total Payable Amount" DataFormatString="{0:C}" />
+                    <asp:BoundField DataField="totalPrice" HeaderText="Total Price" DataFormatString="{0:C}" />
                      <asp:TemplateField HeaderText="Action">
                         <ItemTemplate>
                             <asp:Button ID="btnDelete" runat="server" Text="Delete" CommandName="deleteProduct" CommandArgument='<%# Eval("ProductId") %>' />
@@ -53,8 +56,13 @@
                     </asp:TemplateField>
                 </Columns>
             </asp:GridView>
+             <asp:Label ID="lblTotalP" runat="server" Text="Total Payable Amount : "></asp:Label>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+             <asp:Label ID="lblTotalPay" runat="server"></asp:Label>
+             <br />
              <asp:Label ID="lblEmptyCartMessage" runat="server" ForeColor="Red"></asp:Label>
         </div>
+        <asp:Button ID="btnBuy" runat="server" BackColor="Purple" ForeColor="White" Text="Proceed to checkout" OnClick="btnBuy_Click" />
     </form>
 </body>
 </html>
